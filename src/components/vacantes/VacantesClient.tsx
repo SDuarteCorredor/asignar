@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type { FormEvent } from "react";
 import { trackEvent } from "@/lib/analytics";
 import type { Vacante } from "@/lib/vacantes";
-import { opcionesDeFiltro } from "@/lib/vacantes";
+import { ciudadDesdeParam, opcionesDeFiltro, slugCiudad } from "@/lib/vacantes";
 
 const MARKETING_EMAIL = "marketingdigital@asignar.com.co";
 
@@ -687,7 +687,9 @@ export default function VacantesClient({ vacantes }: { vacantes: Vacante[] }) {
     return () => { document.body.style.overflow = ""; document.removeEventListener("keydown", onKey); };
   }, [mobileOpen]);
 
-  // Deep link desde el home: /vacantes?v=<id> abre esa vacante.
+  // Deep links: /vacantes?v=<id> abre esa vacante y /vacantes?ciudad=<slug>
+  // deja el portal filtrado por esa ciudad (así se comparte «vacantes en
+  // Medellín» sin que el otro lado tenga que tocar el filtro).
   //
   // Se lee de window y no con useSearchParams a propósito: useSearchParams
   // exige un <Suspense> alrededor del portal y entonces el HTML estático pasa
@@ -699,12 +701,22 @@ export default function VacantesClient({ vacantes }: { vacantes: Vacante[] }) {
   // inicial del enlace, no algo que deba repetirse si la lista se revalida.
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- la URL no existe durante el prerender y el deep link se lee una sola vez */
   useEffect(() => {
-    const id = (new URLSearchParams(window.location.search).get("v") ?? "").trim();
-    const indice = vacantes.findIndex((v) => v.id === id);
+    const params = new URLSearchParams(window.location.search);
+
+    /* Una ciudad que ya no tiene vacantes publicadas (o mal escrita) devuelve
+       null y el portal abre sin filtrar, que es mejor que mostrar cero
+       resultados por un enlace viejo. */
+    const ciudadUrl = ciudadDesdeParam(params.get("ciudad") ?? "", opciones.ciudades);
+    if (ciudadUrl) setCiudad(ciudadUrl);
+
+    const id = (params.get("v") ?? "").trim();
+    /* La página se calcula sobre la lista que se va a ver: con ?ciudad= la
+       posición en la lista completa no corresponde. Sin esto, un enlace a la
+       vacante 30 no mostraría nada. */
+    const lista = ciudadUrl ? vacantes.filter((v) => v.ciudad === ciudadUrl) : vacantes;
+    const indice = lista.findIndex((v) => v.id === id);
     if (!id || indice === -1) return;
     setSelectedId(id);
-    // Al montar no hay filtros, así que la posición en la lista completa da
-    // la página. Sin esto, un enlace a la vacante 30 no mostraría nada.
     setPagina(Math.floor(indice / POR_PAGINA) + 1);
     // En móvil el detalle vive en un overlay; en desktop basta con bajar a la lista.
     if (window.matchMedia("(max-width: 1023px)").matches) {
@@ -753,11 +765,48 @@ export default function VacantesClient({ vacantes }: { vacantes: Vacante[] }) {
     setPagina(1);
   }, []);
 
+  /* La barra de direcciones refleja lo que vale la pena compartir: la ciudad
+     filtrada y la vacante abierta. Copiar la URL ya basta, no hace falta un
+     botón aparte.
+
+     Se usa replaceState y no pushState para no llenar el historial: recorrer
+     diez vacantes dejaría diez pasos de «atrás» antes de salir de la página.
+
+     Cada clave se toca solo si viene en `cambios`, así cambiar de vacante no
+     borra la ciudad ni al revés. */
+  const sincronizarUrl = useCallback(
+    (cambios: { ciudad?: string; v?: string | null }) => {
+      const url = new URL(window.location.href);
+      if (cambios.ciudad !== undefined) {
+        if (cambios.ciudad === "Todas") url.searchParams.delete("ciudad");
+        else url.searchParams.set("ciudad", slugCiudad(cambios.ciudad));
+      }
+      if (cambios.v !== undefined) {
+        if (cambios.v) url.searchParams.set("v", cambios.v);
+        else url.searchParams.delete("v");
+      }
+      window.history.replaceState(null, "", url);
+    },
+    []
+  );
+
+  /* Cambiar de ciudad rearma la lista y con ella la vacante abierta, así que
+     el `v` anterior deja de corresponder: se quita para que el enlace quede
+     como `/vacantes?ciudad=medellin` y no apunte a una vacante de otra ciudad. */
+  const cambiarCiudad = useCallback(
+    (c: string) => {
+      filtrar(() => setCiudad(c));
+      sincronizarUrl({ ciudad: c, v: null });
+    },
+    [filtrar, sincronizarUrl]
+  );
+
   const limpiar = useCallback(() => {
     filtrar(() => {
       setQuery(""); setCiudad("Todas"); setSector("Todos"); setModalidad("Todas"); setExperiencia("Todas"); setContrato("Todos");
     });
-  }, [filtrar]);
+    sincronizarUrl({ ciudad: "Todas", v: null });
+  }, [filtrar, sincronizarUrl]);
 
   const cambiarPagina = (p: number) => {
     setPagina(Math.min(Math.max(1, p), totalPaginas));
@@ -768,13 +817,7 @@ export default function VacantesClient({ vacantes }: { vacantes: Vacante[] }) {
   const selectVacante = (id: string, abrirMovil = false) => {
     setSelectedId(id);
 
-    /* La URL refleja la vacante abierta, así que copiarla de la barra del
-       navegador ya sirve para compartir. Se usa replaceState y no pushState
-       para no llenar el historial: recorrer diez vacantes dejaría diez pasos
-       de «atrás» antes de salir de la página. */
-    const url = new URL(window.location.href);
-    url.searchParams.set("v", id);
-    window.history.replaceState(null, "", url);
+    sincronizarUrl({ v: id });
 
     if (abrirMovil && window.matchMedia("(max-width: 1023px)").matches) {
       setMobileOpen(true);
@@ -826,7 +869,7 @@ export default function VacantesClient({ vacantes }: { vacantes: Vacante[] }) {
               opciones={opciones.ciudades}
               open={openChip === "ciudad"}
               onToggle={() => setOpenChip(openChip === "ciudad" ? null : "ciudad")}
-              onChange={(c) => { filtrar(() => setCiudad(c)); setOpenChip(null); }}
+              onChange={(c) => { cambiarCiudad(c); setOpenChip(null); }}
             />
           </div>
 

@@ -253,3 +253,35 @@ export function opcionesDeFiltro(vacantes: Vacante[]) {
     contratos: ["Todos", ...unicos(vacantes.map((v) => v.contrato))],
   };
 }
+
+/**
+ * Ciudad tal como viaja en la URL: sin tildes, en minúsculas y con guiones.
+ * «Bogotá» → «bogota», «Santa Marta» → «santa-marta».
+ *
+ * Se usa un slug y no el nombre crudo porque `/vacantes?ciudad=Bogot%C3%A1`
+ * es lo que se pega en WhatsApp o en una publicación, y ahí el porcentaje
+ * escapado se ve roto.
+ */
+export function slugCiudad(ciudad: string): string {
+  return ciudad
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // marcas diacríticas sueltas del NFD
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Ciudad publicada que corresponde al valor de `?ciudad=`, o `null` si no hay
+ * ninguna. Acepta tanto el slug («medellin») como el nombre tal cual
+ * («Medellín»), así que un enlace escrito a mano también funciona.
+ */
+export function ciudadDesdeParam(
+  valor: string,
+  ciudades: readonly string[]
+): string | null {
+  const slug = slugCiudad(valor);
+  if (!slug) return null;
+  return ciudades.find((c) => c !== "Todas" && slugCiudad(c) === slug) ?? null;
+}
