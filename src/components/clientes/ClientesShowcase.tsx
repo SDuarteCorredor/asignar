@@ -6,12 +6,13 @@ import ClientesModal from "@/components/clientes/ClientesModal";
 import { SECTORES_CLIENTES, type LogoCliente } from "@/lib/clientes";
 
 /**
- * Carrusel de clientes de `/servicios`: el mismo slider del home, pero cada
- * logo abre el directorio completo por sector.
+ * Carrusel de clientes con directorio completo detrás: el mismo bloque en el
+ * Home y en `/servicios`.
  *
- * Antes esta sección era una grilla con los 62 logos a la vez —una pared que
- * nadie recorría—. El carrusel muestra el volumen en movimiento y deja el
- * detalle organizado a un clic, para quien de verdad quiera buscar su sector.
+ * En `/servicios` esto era una grilla con los 62 logos a la vez —una pared que
+ * nadie recorría— y en el Home un marquee que no se podía detener a mirar. El
+ * carrusel muestra el volumen en movimiento y deja el detalle organizado a un
+ * clic, para quien de verdad quiera buscar su sector.
  */
 export default function ClientesShowcase() {
   const [abierto, setAbierto] = useState(false);

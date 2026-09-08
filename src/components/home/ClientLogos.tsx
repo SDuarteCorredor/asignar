@@ -1,5 +1,4 @@
-import LogosCarrusel from "@/components/clientes/LogosCarrusel";
-import { LOGOS_CLIENTES } from "@/lib/clientes";
+import ClientesShowcase from "@/components/clientes/ClientesShowcase";
 
 export default function ClientLogos() {
   return (
@@ -7,11 +6,7 @@ export default function ClientLogos() {
       <p className="text-center font-[var(--font-ui)] text-xs font-semibold uppercase tracking-[0.12em] text-text-muted mb-10">
         Empresas que confían en nosotros
       </p>
-      <LogosCarrusel
-        logos={LOGOS_CLIENTES}
-        etiqueta="Empresas que confían en Asignar"
-        nombreItems="logos"
-      />
+      <ClientesShowcase />
     </section>
   );
 }

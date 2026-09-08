@@ -44,7 +44,7 @@ type Props = {
  */
 export default function LogosCarrusel({
   logos,
-  velocidad = 330,
+  velocidad = 180,
   onLogoClick,
   etiqueta,
   nombreItems = "logos",

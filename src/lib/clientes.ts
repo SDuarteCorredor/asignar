@@ -1,9 +1,9 @@
 /**
  * Logos de clientes reales, con el nombre de la marca que muestra cada uno.
  *
- * Vive aquí y no dentro de un componente porque lo consumen tres vistas: el
- * carrusel del home (`components/home/ClientLogos.tsx`), el de `/servicios` y
- * el modal con el directorio por sector. Antes la grilla de servicios repetía
+ * Vive aquí y no dentro de un componente porque es la fuente de los nombres
+ * (`altDeLogo`) y de la agrupación por sector (`SECTORES_CLIENTES`) que usan
+ * el carrusel y el modal de clientes. Antes la grilla de servicios repetía
  * `alt="Cliente Asignar"` en los 63 logos —inútil para accesibilidad y para
  * búsqueda de imágenes— mientras el home ya tenía los nombres correctos.
  *
@@ -98,8 +98,8 @@ const sector = (nombre: string, srcs: string[]): SectorClientes => ({
 /**
  * Los mismos clientes del marquee, agrupados por el sector al que pertenecen.
  *
- * Vive aquí —y no en `/servicios`— porque ahora lo consumen la página y el
- * modal "todos los clientes" que se abre desde el carrusel. Son 62 y no 63
+ * Vive aquí —y no en `/servicios`— porque ahora lo consumen el carrusel del
+ * Home, el de `/servicios` y el modal de "todos los clientes". Son 62 y no 63
  * porque la variante alterna del logo de NH solo tiene sentido en el marquee,
  * donde repetir una marca pasa desapercibido; en una grilla organizada por
  * sector saldría dos veces la misma empresa.
