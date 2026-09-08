@@ -12,9 +12,16 @@ import {
 } from "@/components/faq/preguntas";
 import {
   SQR_EMAIL,
+  SQR_PLAZO,
   SQR_TELEFONO,
   SQR_TELEFONO_HREF,
 } from "@/components/faq/contacto";
+import {
+  radicarSqr,
+  consultarSqr,
+  type ResultadoRadicacion,
+  type ResultadoConsulta,
+} from "@/lib/sqr";
 
 // Las preguntas viven en @/components/faq/preguntas para que el schema
 // JSON-LD del server component y este acordeón lean la misma fuente.
@@ -95,11 +102,14 @@ export default function FaqClient() {
   const [modo, setModo] = useState<"radicar" | "seguimiento">("radicar");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
-  const [enviado, setEnviado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [radicacion, setRadicacion] = useState<ResultadoRadicacion | null>(null);
 
   // Seguimiento
   const [radicado, setRadicado] = useState("");
   const [docSeguimiento, setDocSeguimiento] = useState("");
+  const [consultando, setConsultando] = useState(false);
+  const [consulta, setConsulta] = useState<ResultadoConsulta | null>(null);
 
   /* ---------- Estado de las preguntas frecuentes ---------- */
   const [query, setQuery] = useState("");
@@ -155,62 +165,54 @@ export default function FaqClient() {
     return Object.keys(e).length === 0;
   };
 
-  // Interino front-end: abre el correo con la SQR diligenciada.
-  // TODO(TI): reemplazar por POST a un endpoint que genere el radicado y persista.
-  const handleSubmit = (ev: React.FormEvent) => {
+  /* Radica en el sistema de SQR y muestra el número que devuelve. Si ese
+     sistema no está configurado o no responde, `radicarSqr` abre el correo
+     con la SQR diligenciada y la pantalla de éxito lo dice. */
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!validar()) return;
+    if (!validar() || enviando) return;
 
-    const cuerpo = [
-      `Tipo de solicitud: ${form.tipo}`,
-      `Nombre: ${form.nombre}`,
-      `Documento: ${form.tipoDoc} ${form.documento}`,
-      `Correo: ${form.email}`,
-      `Teléfono: ${form.telefono}`,
-      `Ciudad / sede: ${form.sede}`,
-      `Vínculo con Asignar: ${form.vinculo}`,
-      "",
-      `Asunto: ${form.asunto}`,
-      "",
-      "Descripción:",
-      form.mensaje,
-      "",
-      "— Autorizo el tratamiento de mis datos personales (Ley 1581 de 2012).",
-    ].join("\n");
-
-    const href = `mailto:${SQR_EMAIL}?subject=${encodeURIComponent(
-      `SQR ${form.tipo} — ${form.asunto}`
-    )}&body=${encodeURIComponent(cuerpo)}`;
+    setEnviando(true);
+    const resultado = await radicarSqr({
+      tipo: form.tipo,
+      nombre: form.nombre,
+      tipoDocumento: form.tipoDoc,
+      documento: form.documento,
+      email: form.email,
+      telefono: form.telefono,
+      sede: form.sede,
+      vinculo: form.vinculo,
+      asunto: form.asunto,
+      mensaje: form.mensaje,
+    });
 
     trackEvent("sqr_radicada", {
       tipo: form.tipo,
       sede: form.sede,
       vinculo: form.vinculo,
+      via: resultado.via,
     });
 
-    window.location.href = href;
-    setEnviado(true);
+    setEnviando(false);
+    setRadicacion(resultado);
   };
 
-  const handleSeguimiento = (ev: React.FormEvent) => {
+  const handleSeguimiento = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!radicado.trim() || !docSeguimiento.trim()) return;
-    const cuerpo = [
-      `Solicito el estado de mi radicado.`,
-      `Número de radicado: ${radicado}`,
-      `Documento: ${docSeguimiento}`,
-    ].join("\n");
-    trackEvent("sqr_seguimiento");
+    if (!radicado.trim() || !docSeguimiento.trim() || consultando) return;
 
-    window.location.href = `mailto:${SQR_EMAIL}?subject=${encodeURIComponent(
-      `Seguimiento SQR — Radicado ${radicado}`
-    )}&body=${encodeURIComponent(cuerpo)}`;
+    setConsultando(true);
+    setConsulta(null);
+    const resultado = await consultarSqr(radicado.trim(), docSeguimiento.trim());
+    trackEvent("sqr_seguimiento", { via: resultado.via });
+    setConsultando(false);
+    setConsulta(resultado);
   };
 
   const resetForm = () => {
     setForm(emptyForm);
     setErrores({});
-    setEnviado(false);
+    setRadicacion(null);
   };
 
   return (
@@ -346,20 +348,36 @@ export default function FaqClient() {
 
               {/* --- Radicar --- */}
               {modo === "radicar" &&
-                (enviado ? (
+                (radicacion ? (
                   <div className="text-center py-6">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-blue/10">
                       <span className="material-symbols-outlined text-brand-blue text-3xl">
-                        mark_email_read
+                        {radicacion.via === "api" ? "task_alt" : "mark_email_read"}
                       </span>
                     </div>
                     <h3 className="font-[var(--font-display)] text-xl font-bold text-brand-navy mb-2">
-                      Tu solicitud está lista para enviar
+                      {radicacion.via === "api"
+                        ? "Tu SQR quedó radicada"
+                        : "Tu solicitud está lista para enviar"}
                     </h3>
+                    {radicacion.via === "api" && (
+                      <div className="mx-auto mb-4 max-w-sm rounded-2xl border border-border bg-surface px-5 py-4">
+                        <p className="font-[var(--font-ui)] text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                          Número de radicado
+                        </p>
+                        <p className="mt-1 font-[var(--font-display)] text-xl font-extrabold tracking-[-0.01em] text-brand-navy">
+                          {radicacion.radicado}
+                        </p>
+                        <p className="mt-2 font-[var(--font-body)] text-[12.5px] text-text-muted">
+                          Guárdalo: con él y tu documento consultas el estado en
+                          «Hacer seguimiento».
+                        </p>
+                      </div>
+                    )}
                     <p className="font-[var(--font-body)] text-sm text-text-secondary max-w-sm mx-auto mb-6">
-                      Abrimos tu correo con la SQR diligenciada. Al enviarlo,
-                      nuestro equipo te asignará un número de radicado y
-                      responderá en un máximo de 15 días hábiles.
+                      {radicacion.via === "api"
+                        ? `Respondemos en un máximo de ${SQR_PLAZO} al correo ${form.email}. Si necesitas ampliar la información, escríbenos citando tu radicado.`
+                        : "Abrimos tu correo con la SQR diligenciada. Al enviarlo, nuestro equipo te asignará un número de radicado y responderá en un máximo de 15 días hábiles."}
                     </p>
                     <button
                       type="button"
@@ -584,10 +602,13 @@ export default function FaqClient() {
 
                     <button
                       type="submit"
-                      className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-[var(--font-ui)] text-[15px] font-semibold py-[15px] rounded-full shadow-[0_8px_20px_-6px_rgba(0,122,254,0.35)] hover:-translate-y-0.5 transition-all duration-200"
+                      disabled={enviando}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-[var(--font-ui)] text-[15px] font-semibold py-[15px] rounded-full shadow-[0_8px_20px_-6px_rgba(0,122,254,0.35)] transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0"
                     >
-                      Radicar solicitud
-                      <span className="material-symbols-outlined text-lg">send</span>
+                      {enviando ? "Radicando…" : "Radicar solicitud"}
+                      {!enviando && (
+                        <span className="material-symbols-outlined text-lg">send</span>
+                      )}
                     </button>
                   </form>
                 ))}
@@ -628,11 +649,61 @@ export default function FaqClient() {
                   </div>
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-[var(--font-ui)] text-[15px] font-semibold py-[15px] rounded-full shadow-[0_8px_20px_-6px_rgba(0,122,254,0.35)] hover:-translate-y-0.5 transition-all duration-200"
+                    disabled={consultando}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-[var(--font-ui)] text-[15px] font-semibold py-[15px] rounded-full shadow-[0_8px_20px_-6px_rgba(0,122,254,0.35)] transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0"
                   >
-                    Consultar estado
-                    <span className="material-symbols-outlined text-lg">search</span>
+                    {consultando ? "Consultando…" : "Consultar estado"}
+                    {!consultando && (
+                      <span className="material-symbols-outlined text-lg">search</span>
+                    )}
                   </button>
+
+                  {/* Resultado de la consulta. Solo aparece cuando el sistema
+                      de SQR contestó: si tocó caer al correo, la persona ya
+                      salió hacia su bandeja y no hay nada que mostrar. */}
+                  {consulta?.via === "api" && (
+                    consulta.encontrado ? (
+                      <div className="rounded-2xl border border-border bg-surface p-5">
+                        <p className="font-[var(--font-ui)] text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                          Radicado {radicado.trim()}
+                        </p>
+                        <p className="mt-1.5 font-[var(--font-display)] text-lg font-extrabold text-brand-navy">
+                          {consulta.estado}
+                        </p>
+                        <dl className="mt-3 flex flex-col gap-1.5">
+                          {consulta.tipo && (
+                            <div className="flex gap-2 font-[var(--font-body)] text-[13px]">
+                              <dt className="text-text-muted">Tipo:</dt>
+                              <dd className="text-text-secondary">{consulta.tipo}</dd>
+                            </div>
+                          )}
+                          {consulta.fecha && (
+                            <div className="flex gap-2 font-[var(--font-body)] text-[13px]">
+                              <dt className="text-text-muted">Radicada:</dt>
+                              <dd className="text-text-secondary">{consulta.fecha}</dd>
+                            </div>
+                          )}
+                        </dl>
+                        {consulta.respuesta && (
+                          <p className="mt-3 border-t border-border pt-3 font-[var(--font-body)] text-[13px] leading-relaxed text-text-secondary">
+                            {consulta.respuesta}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-border bg-surface p-5">
+                        <p className="font-[var(--font-body)] text-sm text-text-secondary">
+                          No encontramos una SQR con ese radicado y ese
+                          documento. Revisa que ambos estén como en el correo de
+                          confirmación, o escríbenos a{" "}
+                          <a href={`mailto:${SQR_EMAIL}`} className="text-brand-blue font-medium">
+                            {SQR_EMAIL}
+                          </a>
+                          .
+                        </p>
+                      </div>
+                    )
+                  )}
                   <p className="font-[var(--font-body)] text-xs text-text-muted text-center">
                     ¿Aún no tienes radicado?{" "}
                     <button
