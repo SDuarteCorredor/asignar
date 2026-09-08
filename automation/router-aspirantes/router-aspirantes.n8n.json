@@ -1,0 +1,908 @@
+{
+  "name": "Asignar - Router Aspirantes v11 Postulaciones Nuevas",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "0b35bbf7-224c-4706-813a-7bf3f4633bfc",
+      "name": "Gmail - Leer correo del trigger",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -1696,
+        480
+      ],
+      "webhookId": "0e0ef77f-c0ce-4fa9-859a-f4a694440385",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const CIUDADES_TEXTO = 'Bogota, Medellin, Rionegro, Cali, Barranquilla, Cartagena, Pereira';\nconst resultados = [];\n\nfor (const item of $input.all()) {\n  const e = item.json;\n\n  // Intentar internalDate primero, luego payload.headers como fallback\n  let fechaReal = e.internalDate ? new Date(parseInt(e.internalDate)).toISOString() : null;\n  if (!fechaReal && e.payload && e.payload.headers) {\n    const dh = e.payload.headers.find(h => h.name === 'Date' || h.name === 'date');\n    if (dh && dh.value) {\n      const parsed = new Date(dh.value);\n      if (!isNaN(parsed.getTime())) fechaReal = parsed.toISOString();\n    }\n  }\n\n  const fromReal = e.from || e.From || e.sender || '';\n  const texto = `${e.subject || e.Subject || ''} ${e.text || e.snippet || e.body || ''}`.substring(0, 1500);\n\n  const contenido = [];\n  const binary = item.binary || {};\n  const adjuntos = Object.keys(binary);\n\n  for (const key of adjuntos) {\n    const adj = binary[key];\n    const mimeType = adj.mimeType || '';\n    if (mimeType === 'application/pdf') {\n      contenido.push({\n        type: 'document',\n        source: {\n          type: 'base64',\n          media_type: 'application/pdf',\n          data: adj.data\n        }\n      });\n    }\n  }\n\n  contenido.push({\n    type: 'text',\n    text: `Eres asistente de RRHH de Asignar SAS, empresa de servicios temporales en Colombia.\nAnaliza este email y responde UNICAMENTE con JSON valido, sin texto adicional ni markdown.\n\nCONTEXTO: Estos emails provienen de una limpieza de la bandeja marketingdigital@asignar.com.co. Son hojas de vida y postulaciones recibidas en 2025 que no fueron procesadas en su momento.\n\nPrimero determina si este email es una postulacion de empleo o envio de hoja de vida.\nSI es postulacion: alguien enviando su CV, preguntando por vacantes, adjuntando hoja de vida, mencionando que quiere trabajar.\nNO es postulacion: facturas, newsletters, notificaciones de plataformas, correos de trabajo del equipo, alertas de sistemas, confirmaciones de compra.\n\nSi NO es postulacion, responde SOLO:\n{ \"es_postulacion\": false, \"accion\": \"dejar_inbox\", \"motivo\": \"razon breve\" }\n\nSi SI es postulacion, busca la ciudad en TODO el contenido: asunto, cuerpo del email Y en los documentos adjuntos.\nCiudades validas (devuelve el nombre EXACTAMENTE como aparece en esta lista): ${CIUDADES_TEXTO}\n\nEmail:\n- Asunto: ${e.subject || e.Subject || '(sin asunto)'}\n- Remitente: ${fromReal || '(desconocido)'}\n- Contenido: ${texto}\n\nSi es postulacion, devuelve:\n{\n  \"es_postulacion\": true,\n  \"ciudad\": \"nombre EXACTO de la lista o null si no aparece ninguna\",\n  \"cargo\": \"cargo mencionado o null\",\n  \"tiene_hoja_de_vida\": true o false,\n  \"accion\": \"reenviar\" o \"revisar_manual\",\n  \"motivo\": \"razon breve\",\n  \"confianza\": \"alta\" o \"media\" o \"baja\"\n}\n\nREGLAS CRITICAS:\n- ciudad debe ser EXACTAMENTE uno de: ${CIUDADES_TEXTO}\n- Busca la ciudad en el email Y en los documentos adjuntos\n- Solo null si NO aparece ninguna ciudad en ninguna parte\n- accion reenviar cuando ciudad identificada, revisar_manual cuando ciudad es null`\n  });\n\n  resultados.push({\n    json: {\n      emailData: { ...e, date: fechaReal, fromResuelto: fromReal },\n      apiBodyObj: {\n        model: 'claude-haiku-4-5-20251001',\n        max_tokens: 400,\n        messages: [{ role: 'user', content: contenido }]\n      }\n    }\n  });\n}\n\nreturn resultados;"
+      },
+      "id": "18bae9ee-401b-47fc-aefd-e14bd637c564",
+      "name": "Preparar Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiBodyObj }}",
+        "options": {}
+      },
+      "id": "a00af2e8-3794-47ee-931f-e83ad1702cfd",
+      "name": "Claude - Clasificar Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -1376,
+        480
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "Hy0oSMvNkIY2IQt0",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepItems = $('Preparar Prompt').all();\nconst httpItems = $input.all();\nconst FECHA_CORTE = new Date('2025-01-01T00:00:00Z');\nconst FECHA_ANTIGUA = new Date('2026-01-01T00:00:00Z');\nconst EMAIL_FALLBACK = 'contratacion2@asignar.com.co';\n\nfunction getEmailForCiudad(ciudad) {\n  if (!ciudad) return null;\n  const map = {\n    'bogota':        'reclutamientobog4@asignar.com.co',\n    'medellin':      'seleccion4@asignar.com.co',\n    'rionegro':      'seleccion4@asignar.com.co',\n    'cali':          'seleccioncali@asignar.com.co',\n    'barranquilla':  'seleccionbarranquilla@asignar.com.co',\n    'cartagena':     'seleccioncartagena407@gmail.com',\n    'pereira':       'generalistapereira@asignar.com.co'\n  };\n  let s = ciudad;\n  try { s = decodeURIComponent(escape(ciudad)); } catch(e) {}\n  s = s.toLowerCase().trim()\n    .replace(/[aáàäâã]/g, 'a')\n    .replace(/[eéèëê]/g, 'e')\n    .replace(/[iíìïî]/g, 'i')\n    .replace(/[oóòöôõ]/g, 'o')\n    .replace(/[uúùüû]/g, 'u')\n    .replace(/ñ/g, 'n');\n  return map[s] || null;\n}\n\nfunction extraerJSON(text) {\n  if (!text) throw new Error('Respuesta vacia');\n  let limpio = text.replace(/```json\\s*/gi, '').replace(/```/g, '').trim();\n  const inicio = limpio.indexOf('{');\n  const fin = limpio.lastIndexOf('}');\n  if (inicio !== -1 && fin > inicio) {\n    limpio = limpio.substring(inicio, fin + 1);\n  }\n  return JSON.parse(limpio);\n}\n\nconst resultados = [];\nfor (let i = 0; i < httpItems.length; i++) {\n  const httpResp = httpItems[i].json;\n  const origEmail = prepItems[i].json.emailData;\n  const fechaResuelta = origEmail.date || (origEmail.internalDate ? new Date(parseInt(origEmail.internalDate)).toISOString() : '');\n  const fromResuelta = origEmail.fromResuelto || origEmail.from || origEmail.From || '';\n\n  let cl = {};\n  let rawClaude = '';\n  try {\n    if (!httpResp.content || !httpResp.content[0]) {\n      throw new Error('Sin content en respuesta API: ' + JSON.stringify(httpResp).substring(0, 300));\n    }\n    rawClaude = httpResp.content[0].text || '';\n    cl = extraerJSON(rawClaude);\n  } catch(err) {\n    cl = { es_postulacion: false, accion: 'dejar_inbox', motivo: 'ERROR_PARSEO: ' + err.message };\n  }\n\n  const fechaEmail = new Date(fechaResuelta);\n  const fechaValida = !isNaN(fechaEmail.getTime());\n  const esAntiguo = fechaValida && fechaEmail < FECHA_ANTIGUA;\n  const yearEmail = fechaValida ? fechaEmail.getFullYear() : 'desconocido';\n\n  if (!cl.es_postulacion) {\n    resultados.push({ json: {\n      id: origEmail.id,\n      fecha: fechaResuelta,\n      asunto: origEmail.subject || origEmail.Subject || '(sin asunto)',\n      remitente: fromResuelta,\n      esPostulacion: false,\n      motivoClaude: cl.motivo,\n      rawClaude: rawClaude.substring(0, 500),\n      accionFinal: 'DEJAR EN INBOX',\n      emailDestino: 'sin accion',\n      categoria: 'dejar_inbox',\n      esAntiguo,\n      yearEmail,\n      origSubject: origEmail.subject || origEmail.Subject || '(sin asunto)',\n      origFrom: fromResuelta,\n      origDate: fechaResuelta,\n      origBody: origEmail.text || origEmail.snippet || '(sin contenido)'\n    }});\n    continue;\n  }\n\n  const esReciente = !fechaValida || fechaEmail >= FECHA_CORTE;\n  const emailCiudad = getEmailForCiudad(cl.ciudad);\n  let emailDestino = '', categoria = '';\n\n  if (!esReciente) {\n    categoria = 'archivar';\n    emailDestino = 'ARCHIVAR';\n  } else if (cl.ciudad && emailCiudad) {\n    categoria = 'reenviar';\n    emailDestino = emailCiudad;\n  } else {\n    categoria = 'revisar_manual';\n    emailDestino = EMAIL_FALLBACK;\n  }\n\n  const accionFinal = categoria === 'archivar'\n    ? 'ARCHIVAR (pre-2025)'\n    : categoria === 'reenviar'\n      ? 'REENVIAR -> ' + emailDestino\n      : 'REVISAR MANUAL -> ' + emailDestino;\n\n  resultados.push({ json: {\n    id: origEmail.id,\n    fecha: fechaResuelta,\n    asunto: origEmail.subject || origEmail.Subject || '(sin asunto)',\n    remitente: fromResuelta,\n    esPostulacion: true,\n    ciudadDetectada: cl.ciudad || 'No detectada',\n    cargo: cl.cargo || '(no especificado)',\n    tieneHV: cl.tiene_hoja_de_vida,\n    confianza: cl.confianza,\n    motivoClaude: cl.motivo,\n    rawClaude: rawClaude.substring(0, 500),\n    esReciente,\n    esAntiguo,\n    yearEmail,\n    accionFinal,\n    emailDestino,\n    categoria,\n    origSubject: origEmail.subject || origEmail.Subject || '(sin asunto)',\n    origFrom: fromResuelta,\n    origDate: fechaResuelta,\n    origBody: origEmail.text || origEmail.snippet || '(sin contenido)'\n  }});\n}\nreturn resultados;"
+      },
+      "id": "f9408d35-2415-4214-8033-82824c52eeae",
+      "name": "Parsear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.categoria }}",
+              "rightValue": "archivar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.categoria }}",
+              "rightValue": "reenviar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c3",
+              "leftValue": "={{ $json.categoria }}",
+              "rightValue": "revisar_manual",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "f5300c05-90fb-40cf-9945-8f8cf7621a65",
+      "name": "IF - Necesita accion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c4",
+              "leftValue": "={{ $json.categoria }}",
+              "rightValue": "reenviar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bc3fadb1-9507-4948-b172-51ee0528ace8",
+      "name": "IF - Es reenvio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "daa3703e-4e97-43e9-9fcf-23ab5637f223",
+      "name": "Gmail - Get Completo (reenvio)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        96
+      ],
+      "webhookId": "9e239b73-b718-4262-9168-f46670f41ad7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const getItem = $input.item;\nconst parsearItems = $(\"Parsear Respuesta\").all();\nconst currentId = getItem.json.id;\nconst parsearItem = parsearItems.find(p => p.json.id === currentId);\nif (!parsearItem) {\n  return { json: getItem.json };\n}\nconst binaryData = getItem.binary || {};\nconst keys = Object.keys(binaryData);\nconst mergedJson = { ...parsearItem.json };\nconst origText = getItem.json.text || getItem.json.snippet || '(sin contenido)';\nconst origHtml = getItem.json.html || '';\nmergedJson.origBodyFull = origText;\nmergedJson.origHtmlFull = origHtml;\nif (keys.length > 0) {\n  const newBinary = {};\n  const attachmentProps = [];\n  keys.forEach((key, i) => {\n    const propName = `attachment_${i}`;\n    newBinary[propName] = binaryData[key];\n    attachmentProps.push(propName);\n  });\n  mergedJson.attachmentCount = keys.length;\n  mergedJson.attachmentProperties = attachmentProps;\n  return { json: mergedJson, binary: newBinary };\n}\nmergedJson.attachmentCount = 0;\nmergedJson.attachmentProperties = [];\nreturn { json: mergedJson };"
+      },
+      "id": "f34b30c5-48b3-47b0-9c0f-7ce84c25c10a",
+      "name": "Merge Binario (reenvio)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c5",
+              "leftValue": "={{ $json.categoria }}",
+              "rightValue": "revisar_manual",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b4c21b3d-03bf-430f-bc32-3595c213a479",
+      "name": "IF - Es revisar manual?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "9b33f5e2-89bd-4163-a470-e3377547e075",
+      "name": "Gmail - Get Completo (fallback)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        384
+      ],
+      "webhookId": "a2ff26dd-01df-4c13-9666-7c372b7bcfe6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const getItem = $input.item;\nconst parsearItems = $(\"Parsear Respuesta\").all();\nconst currentId = getItem.json.id;\nconst parsearItem = parsearItems.find(p => p.json.id === currentId);\nif (!parsearItem) {\n  return { json: getItem.json };\n}\nconst binaryData = getItem.binary || {};\nconst keys = Object.keys(binaryData);\nconst mergedJson = { ...parsearItem.json };\nconst origText = getItem.json.text || getItem.json.snippet || '(sin contenido)';\nconst origHtml = getItem.json.html || '';\nmergedJson.origBodyFull = origText;\nmergedJson.origHtmlFull = origHtml;\nif (keys.length > 0) {\n  const newBinary = {};\n  const attachmentProps = [];\n  keys.forEach((key, i) => {\n    const propName = `attachment_${i}`;\n    newBinary[propName] = binaryData[key];\n    attachmentProps.push(propName);\n  });\n  mergedJson.attachmentCount = keys.length;\n  mergedJson.attachmentProperties = attachmentProps;\n  return { json: mergedJson, binary: newBinary };\n}\nmergedJson.attachmentCount = 0;\nmergedJson.attachmentProperties = [];\nreturn { json: mergedJson };"
+      },
+      "id": "b51ace12-3d6c-4345-b581-6fda31633e55",
+      "name": "Merge Binario (fallback)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_3302257284661813306"
+        ]
+      },
+      "id": "426e47ea-3706-4f00-979d-b1a4a6fe6469",
+      "name": "Gmail - Archivar (pre-2025)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        576
+      ],
+      "webhookId": "b0ae55ff-16b4-4b5c-91c8-9bb225e09db4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $('Gmail - Leer correo del trigger').item.json.id }}"
+      },
+      "id": "fdce1c88-abed-4207-849f-c20f5a3ead9d",
+      "name": "Gmail - Eliminar (post-reenvio)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        80
+      ],
+      "webhookId": "a833f0fe-dbfa-4aab-9287-8df372901520",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $('Gmail - Leer correo del trigger').item.json.id }}"
+      },
+      "id": "0cd7fafc-583f-484d-b79d-ca20b17d7ede",
+      "name": "Gmail - Eliminar (fallback)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        352,
+        384
+      ],
+      "webhookId": "36542b55-9d12-451e-b55a-64282871da4a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "email_valid",
+              "leftValue": "={{ $json.emailDestino }}",
+              "rightValue": "ARCHIVAR",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f7665ae2-0636-417b-bb2b-21e3bb104f0e",
+      "name": "Validar Email Fallback",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "Label_2027735909458037294"
+        ]
+      },
+      "id": "977f28db-99b9-4af6-bb76-c6b4153a3719",
+      "name": "Gmail - Mover a Marketing",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        672
+      ],
+      "webhookId": "c080216a-81f2-404d-a471-1b8730de1324",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "id": "e80e435d-2ca9-40bd-a048-df3777d8e527",
+      "name": "Gmail - Remover Inbox (Marketing)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        672
+      ],
+      "webhookId": "6045413d-51f6-48de-a9e4-185b30d69477",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has_attachments",
+              "leftValue": "={{ $json.attachmentCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4a332451-0488-42d5-a225-c72d7d67bbce",
+      "name": "IF - Tiene Adjuntos? (reenvio)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.emailDestino }}",
+        "subject": "={{ '[ASPIRANTE] ' + ($json.ciudadDetectada || 'Sin ciudad') + ' | ' + ($json.cargo || 'Sin cargo') + ' - ' + $json.origSubject }}",
+        "emailType": "text",
+        "message": "={{ ($json.esAntiguo ? '*** AVISO: HOJA DE VIDA ANTIGUA - LIMPIEZA DE BANDEJA ' + $json.yearEmail + ' ***\\nEsta postulacion fue recibida en ' + $json.yearEmail + ' y no fue procesada en su momento. Fue recuperada durante la limpieza de la bandeja marketingdigital@asignar.com.co.\\nPor favor evaluarla considerando la fecha original de postulacion y las vacantes disponibles actualmente.\\n\\n' : '*** POSTULACION ACTUAL ***\\nEste correo es una postulacion reciente recibida en la bandeja marketingdigital@asignar.com.co.\\n\\n') + 'Reenviado automaticamente por el sistema de Asignar SAS\\n\\nCiudad: ' + ($json.ciudadDetectada || 'No detectada') + '\\nCargo: ' + ($json.cargo || 'No especificado') + '\\nTiene HV: ' + ($json.tieneHV ? 'Si' : 'No detectada en texto') + '\\nConfianza: ' + ($json.confianza || 'N/A') + '\\n\\n---- Mensaje original ----\\nDe: ' + $json.origFrom + '\\nFecha: ' + $json.origDate + '\\n\\n' + $json.origBodyFull }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "attachment_0"
+              }
+            ]
+          }
+        }
+      },
+      "id": "22cb4692-07c8-497e-beec-e5781cfd255f",
+      "name": "Gmail - Reenviar CON Adjuntos",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        0
+      ],
+      "webhookId": "9cf5d72c-e2eb-4c6f-b5e4-2f91b4975b94",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.emailDestino }}",
+        "subject": "={{ '[ASPIRANTE] ' + ($json.ciudadDetectada || 'Sin ciudad') + ' | ' + ($json.cargo || 'Sin cargo') + ' - ' + $json.origSubject }}",
+        "emailType": "text",
+        "message": "={{ ($json.esAntiguo ? '*** AVISO: HOJA DE VIDA ANTIGUA - LIMPIEZA DE BANDEJA ' + $json.yearEmail + ' ***\\nEsta postulacion fue recibida en ' + $json.yearEmail + ' y no fue procesada en su momento. Fue recuperada durante la limpieza de la bandeja marketingdigital@asignar.com.co.\\nPor favor evaluarla considerando la fecha original de postulacion y las vacantes disponibles actualmente.\\n\\n' : '*** POSTULACION ACTUAL ***\\nEste correo es una postulacion reciente recibida en la bandeja marketingdigital@asignar.com.co.\\n\\n') + 'Reenviado automaticamente por el sistema de Asignar SAS\\n\\nCiudad: ' + ($json.ciudadDetectada || 'No detectada') + '\\nCargo: ' + ($json.cargo || 'No especificado') + '\\nTiene HV: ' + ($json.tieneHV ? 'Si' : 'No detectada en texto') + '\\nConfianza: ' + ($json.confianza || 'N/A') + '\\n\\n---- Mensaje original ----\\nDe: ' + $json.origFrom + '\\nFecha: ' + $json.origDate + '\\n\\n' + $json.origBodyFull }}",
+        "options": {}
+      },
+      "id": "e3339853-9378-4e95-a1e3-be4192e5f814",
+      "name": "Gmail - Reenviar SIN Adjuntos",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        192
+      ],
+      "webhookId": "1d3cd758-814e-4c5e-be22-527bb2bb0d6f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has_attachments_fb",
+              "leftValue": "={{ $json.attachmentCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fa904333-f3f5-4901-b73f-dfe74727863a",
+      "name": "IF - Tiene Adjuntos? (fallback)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.emailDestino }}",
+        "subject": "={{ '[REVISAR] ' + ($json.ciudadDetectada || 'Sin ciudad') + ' | ' + ($json.cargo || 'Sin cargo') + ' - ' + $json.origSubject }}",
+        "emailType": "text",
+        "message": "={{ ($json.esAntiguo ? '*** AVISO: HOJA DE VIDA ANTIGUA - LIMPIEZA DE BANDEJA ' + $json.yearEmail + ' ***\\nEsta postulacion fue recibida en ' + $json.yearEmail + ' y no fue procesada en su momento. Fue recuperada durante la limpieza de la bandeja marketingdigital@asignar.com.co.\\nPor favor evaluarla considerando la fecha original de postulacion y las vacantes disponibles actualmente.\\n\\n' : '*** POSTULACION ACTUAL ***\\nEste correo es una postulacion reciente recibida en la bandeja marketingdigital@asignar.com.co.\\n\\n') + 'ATENCION: Este correo requiere revision manual porque el sistema no detecto toda la informacion necesaria para enrutarlo automaticamente.\\n\\nMotivo: ' + $json.motivoClaude + '\\n\\nCiudad detectada: ' + ($json.ciudadDetectada || 'No detectada') + '\\nCargo: ' + ($json.cargo || 'No especificado') + '\\nTiene HV: ' + ($json.tieneHV ? 'Si' : 'No detectada en texto') + '\\n\\nPor favor revisa manualmente y reenvía al equipo de seleccion correspondiente.\\n\\n---- Mensaje original ----\\nDe: ' + $json.origFrom + '\\nFecha: ' + $json.origDate + '\\n\\n' + $json.origBodyFull }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "attachment_0"
+              }
+            ]
+          }
+        }
+      },
+      "id": "bdc5a5a7-cb76-41a1-a09f-46dddffdbf3d",
+      "name": "Gmail - Enviar Fallback CON Adjuntos",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        160,
+        288
+      ],
+      "webhookId": "45ad5639-f87a-4caf-ae8a-102eb2f5f6ed",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.emailDestino }}",
+        "subject": "={{ '[REVISAR] ' + ($json.ciudadDetectada || 'Sin ciudad') + ' | ' + ($json.cargo || 'Sin cargo') + ' - ' + $json.origSubject }}",
+        "emailType": "text",
+        "message": "={{ ($json.esAntiguo ? '*** AVISO: HOJA DE VIDA ANTIGUA - LIMPIEZA DE BANDEJA ' + $json.yearEmail + ' ***\\nEsta postulacion fue recibida en ' + $json.yearEmail + ' y no fue procesada en su momento. Fue recuperada durante la limpieza de la bandeja marketingdigital@asignar.com.co.\\nPor favor evaluarla considerando la fecha original de postulacion y las vacantes disponibles actualmente.\\n\\n' : '*** POSTULACION ACTUAL ***\\nEste correo es una postulacion reciente recibida en la bandeja marketingdigital@asignar.com.co.\\n\\n') + 'ATENCION: Este correo requiere revision manual porque el sistema no detecto toda la informacion necesaria para enrutarlo automaticamente.\\n\\nMotivo: ' + $json.motivoClaude + '\\n\\nCiudad detectada: ' + ($json.ciudadDetectada || 'No detectada') + '\\nCargo: ' + ($json.cargo || 'No especificado') + '\\nTiene HV: ' + ($json.tieneHV ? 'Si' : 'No detectada en texto') + '\\n\\nPor favor revisa manualmente y reenvía al equipo de seleccion correspondiente.\\n\\n---- Mensaje original ----\\nDe: ' + $json.origFrom + '\\nFecha: ' + $json.origDate + '\\n\\n' + $json.origBodyFull }}",
+        "options": {}
+      },
+      "id": "8e8e5113-0836-45f2-874e-023c34adae74",
+      "name": "Gmail - Enviar Fallback SIN Adjuntos",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        160,
+        480
+      ],
+      "webhookId": "8b3f81a0-8842-4b66-93e5-e67819ea05c5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1840,
+        480
+      ],
+      "id": "7173986d-79ed-4af2-9d07-e2141656e101",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UDNmkq5N4mN6Ysj6",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail - Leer correo del trigger": {
+      "main": [
+        [
+          {
+            "node": "Preparar Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude - Clasificar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Clasificar Email": {
+      "main": [
+        [
+          {
+            "node": "Parsear Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Respuesta": {
+      "main": [
+        [
+          {
+            "node": "IF - Necesita accion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Necesita accion?": {
+      "main": [
+        [
+          {
+            "node": "IF - Es reenvio?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail - Mover a Marketing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Es reenvio?": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Get Completo (reenvio)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF - Es revisar manual?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Get Completo (reenvio)": {
+      "main": [
+        [
+          {
+            "node": "Merge Binario (reenvio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Binario (reenvio)": {
+      "main": [
+        [
+          {
+            "node": "IF - Tiene Adjuntos? (reenvio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Es revisar manual?": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Get Completo (fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail - Archivar (pre-2025)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Get Completo (fallback)": {
+      "main": [
+        [
+          {
+            "node": "Merge Binario (fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Binario (fallback)": {
+      "main": [
+        [
+          {
+            "node": "Validar Email Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Email Fallback": {
+      "main": [
+        [
+          {
+            "node": "IF - Tiene Adjuntos? (fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Mover a Marketing": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Remover Inbox (Marketing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Tiene Adjuntos? (reenvio)": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Reenviar CON Adjuntos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail - Reenviar SIN Adjuntos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Tiene Adjuntos? (fallback)": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Enviar Fallback CON Adjuntos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail - Enviar Fallback SIN Adjuntos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Reenviar CON Adjuntos": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Eliminar (post-reenvio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Reenviar SIN Adjuntos": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Eliminar (post-reenvio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Enviar Fallback CON Adjuntos": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Eliminar (fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Enviar Fallback SIN Adjuntos": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Eliminar (fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Leer correo del trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "feea4034-05da-479d-8809-bf2d05a309f9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ad5a031c205701175a59da2f498be47dbce917e2c5a2016625c5d8e831cdf1be"
+  },
+  "id": "vXNOsUwNFQPVPVNN",
+  "tags": []
+}
