@@ -1,0 +1,643 @@
+{
+  "name": "Comercial - Solicitudes web (página nueva)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Comercial - Solicitudes de la web nueva\n\nMismo resultado que el flujo de Gmail (portafolio + link de agenda + registro), pero **disparado por la propia página**, no por un correo.\n\n**Por qué existe**\nLa web nueva envía la solicitud a un webhook. El flujo de Gmail sigue vivo para la página vieja y **no se toca**.\n\n**Flujo**\n1. Webhook recibe el formulario de `/servicios` o `/contacto`\n2. Normaliza los campos (ya vienen separados: no se parsea texto)\n3. Responde al sitio de inmediato para que el formulario confirme\n4. Avisa a Paula\n5. Envía el portafolio al correo del cliente con el botón **Agendar reunión**\n6. Registra la fila en el mismo Sheet de siempre\n\n**Ojo**\n- Escribe en el **mismo Sheet** que el flujo de Gmail, así que *Seguimiento - Detectar reunión agendada* sigue funcionando igual (cruza por EMAIL).\n- Si la solicitud llega sin correo válido, no se envía nada al cliente: se registra como `REVISAR - sin correo` y se avisa a Paula.",
+        "height": 560,
+        "width": 460,
+        "color": 4
+      },
+      "id": "note-solicitudes-web",
+      "name": "Nota - Cómo funciona",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "solicitud-comercial",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-solicitud",
+      "name": "📥 Solicitud web (webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1360,
+        420
+      ],
+      "webhookId": "b7c1e4a2-3d5f-4a91-8c62-9f0d7e5a1b34"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-sheet",
+              "name": "spreadsheetId",
+              "type": "string",
+              "value": "1tlnz559jVxHivBunTFlOy7cBl-5oWBgPpUnHKpoGXf4"
+            },
+            {
+              "id": "cfg-pdf",
+              "name": "portafolioFileId",
+              "type": "string",
+              "value": "1tWvZscYmTMfo4Oldl_06ERtWwnLNkjof"
+            },
+            {
+              "id": "cfg-paula",
+              "name": "correoPaula",
+              "type": "string",
+              "value": "comercialbog@asignar.com.co"
+            },
+            {
+              "id": "cfg-asunto",
+              "name": "replySubject",
+              "type": "string",
+              "value": "Asignar Servicios Temporales - Portafolio de servicios"
+            },
+            {
+              "id": "cfg-agenda",
+              "name": "linkAgenda",
+              "type": "string",
+              "value": "https://calendar.app.google/EfAadJ2bHWRUEszXA"
+            },
+            {
+              "id": "cfg-body",
+              "name": "replyBody",
+              "type": "string",
+              "value": "<div style=\"font-family:Arial,sans-serif;color:#222;font-size:14px;line-height:1.7;\"><p>Un gusto {{nombre}},</p><p>Les saluda Paula, de Asignar SAS, vi la solicitud de {{empresa}}.</p><p>Hoy apoyamos la operación de importantes cadenas hoteleras y empresas a nivel nacional como <b>Marriott, Grand Hyatt, NH Hotels, GHL, Estelar, Movich y Accor</b>, brindando soluciones ágiles para la administración de personal temporal y operativo.</p><p>Adjunto comparto nuestro portafolio de servicios. Estoy segura de que podemos aportar valor a la operación de {{empresa}}, tal como lo hacemos con nuestros clientes, gracias a nuestro acompañamiento permanente, tiempos de respuesta oportunos y flexibilidad para atender las necesidades de cada operación.</p><p>Me gustaría conocer un poco más sobre sus requerimientos y mostrarle cómo podemos apoyarlos.</p><p><b>¿Tiene 10 minutos esta semana para una llamada rápida?</b></p><p>Puede agendar directamente en mi calendario, en el horario que más le convenga:</p><p><a href=\"{{linkAgenda}}\" style=\"display:inline-block;background:#3d64ff;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:6px;font-weight:bold;font-size:14px;\">Agendar reunión con Paula</a></p><p style=\"color:#555;font-size:13px\">Si prefiere que la contactemos nosotros, con gusto la llamamos.</p><p>Quedo atenta a sus comentarios.</p></div><br><div>Atentamente.</div><div><br></div><div><img src=\"https://lh3.googleusercontent.com/d/1WP_-sFfZ6bkGSxGsCtjeNdcts1KLyyLO\" style=\"max-width:100%\"></div><div><span style=\"color:rgb(34,34,34);font-family:Verdana,sans-serif;font-size:10.6667px;text-align:justify\">&quot;Los datos personales que usted nos autoriza a tratar mediante la recolección, el almacenamiento y el uso de los mismos, se realiza de acuerdo a las finalidades descritas en la Política para Tratamiento de datos Personales de ASIGNAR S.A.S y CONEXIÓN OUTSOURCING S.A.S. Este mensaje puede contener información confidencial y privilegiada. Si él mismo ha sido enviado a Usted por error, responda por favor para informar al remitente sobre el error y después elimine inmediatamente este mensaje&quot;</span></div>"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "cfg-solicitud",
+      "name": "⚙️ Configuración",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1140,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza la solicitud que llega del formulario de la web nueva.\n//\n// A diferencia del flujo de Gmail (que parsea el cuerpo de un correo con\n// expresiones regulares), aquí los campos llegan ya separados en el JSON del\n// webhook: no hay nada que adivinar y nada que se rompa si cambia el texto\n// del correo.\n\nconst cfg = $('⚙️ Configuración').first().json;\nconst src = $json.body || $json || {};\n\nconst txt = (v) => (v === undefined || v === null) ? '' : String(v).trim();\nconst dato = (v) => txt(v) || '(sin dato)';\n\nconst empresa  = txt(src.empresa);\nconst nombre   = txt(src.nombre);\nconst email    = txt(src.email).toLowerCase();\nconst telefono = txt(src.telefono).replace(/[\\s()\\-]/g, '');\nconst ciudad   = txt(src.ciudad);\nconst servicio = txt(src.servicio);\nconst mensaje  = txt(src.mensaje) || 'Solicito una propuesta comercial.';\nconst origen   = txt(src.origen) || 'web';\nconst pagina   = txt(src.pagina);\n\n// Sin correo no hay a quién responderle: cae en la rama REVISAR.\nconst correoValido = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n\n// El texto de Paula vive en ⚙️ Configuración; aquí solo se personaliza.\nconst mensajeFinal = txt(cfg.replyBody)\n  .split('{{nombre}}').join(nombre)\n  .split('{{empresa}}').join(empresa || 'su empresa')\n  .split('{{ciudad}}').join(ciudad)\n  .split('{{linkAgenda}}').join(txt(cfg.linkAgenda));\n\nconst ahora = new Date();\nconst fechaLegible = ahora.toLocaleString('es-CO', {\n  timeZone: 'America/Bogota', dateStyle: 'full', timeStyle: 'short'\n});\n\n// Estas filas no vienen de un correo, así que no hay messageId de Gmail que\n// usar como identificador. Se genera uno propio con el mismo papel.\nconst id = 'web-' + ahora.getTime().toString(36) + '-' + Math.random().toString(36).slice(2, 7);\n\nconst dondeSeLlenó = origen === 'contacto' ? 'formulario de /contacto'\n                   : origen === 'servicios' ? 'formulario de /servicios'\n                   : 'formulario de la web (' + origen + ')';\n\nconst avisoPaula = [\n  correoValido\n    ? 'Nueva solicitud desde la página web. Ya se le envió el portafolio con el link para agendar.'\n    : 'Nueva solicitud desde la página web SIN correo válido: no se pudo enviar el portafolio. Hay que responder a mano.',\n  '',\n  'Empresa: ' + dato(empresa),\n  'Contacto: ' + dato(nombre),\n  'Correo: ' + (email || '(sin dato)'),\n  'Teléfono: ' + dato(telefono),\n  'Ciudad: ' + dato(ciudad),\n  'Servicio de interés: ' + dato(servicio),\n  '',\n  'Necesidad:',\n  mensaje,\n  '',\n  'Origen: ' + dondeSeLlenó,\n  pagina ? 'Página: ' + pagina : null,\n  'Recibida: ' + fechaLegible\n].filter((l) => l !== null).join('\\n');\n\nreturn [{ json: {\n  id,\n  origen,\n  pagina,\n  empresa,\n  nombre,\n  email,\n  telefono,\n  ciudad,\n  servicio,\n  mensaje,\n  correoValido,\n  mensajeFinal,\n  fechaISO: ahora.toISOString(),\n  fechaLegible,\n  estado: correoValido ? 'Portafolio enviado' : 'REVISAR - sin correo',\n  asuntoRegistro: 'Solicitud web - ' + (origen || 'web'),\n  observacion: 'Origen: ' + dondeSeLlenó + (servicio ? ' | Servicio: ' + servicio : ''),\n  asuntoAvisoPaula: (correoValido ? '[Comercial] Nueva solicitud web - ' : '[Comercial] REVISAR solicitud web - ')\n    + (empresa || email || 'sin empresa'),\n  avisoPaula\n}}];\n"
+      },
+      "id": "norm-solicitud",
+      "name": "🧾 Normalizar solicitud",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -920,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {}
+      },
+      "id": "resp-solicitud",
+      "name": "✅ Responder al sitio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -700,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-correo",
+              "leftValue": "={{ $('🧾 Normalizar solicitud').first().json.correoValido }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-correo",
+      "name": "❓ ¿Tiene correo válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -480,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('⚙️ Configuración').first().json.correoPaula }}",
+        "subject": "={{ $('🧾 Normalizar solicitud').first().json.asuntoAvisoPaula }}",
+        "emailType": "text",
+        "message": "={{ $('🧾 Normalizar solicitud').first().json.avisoPaula }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "gm-paula-ok",
+      "name": "🔔 Avisar a Paula",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        300
+      ],
+      "webhookId": "c8d2f5b3-4e6a-4b02-9d73-0a1e8f6b2c45",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6Y0ppgw5612jvIrR",
+          "name": "Gmail account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('⚙️ Configuración').first().json.portafolioFileId }}"
+        },
+        "options": {}
+      },
+      "id": "drive-portafolio",
+      "name": "📎 Descargar portafolio (PDF)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -20,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 4000,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "KZcbILhzNkg4PVmI",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('🧾 Normalizar solicitud').first().json.email }}",
+        "subject": "={{ $('⚙️ Configuración').first().json.replySubject }}",
+        "message": "={{ $('🧾 Normalizar solicitud').first().json.mensajeFinal }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "id": "gm-cliente",
+      "name": "📤 Enviar portafolio al cliente",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "d9e3a6c4-5f7b-4c13-8e84-1b2f9a7c3d56",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6Y0ppgw5612jvIrR",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('⚙️ Configuración').first().json.correoPaula }}",
+        "subject": "={{ $('🧾 Normalizar solicitud').first().json.asuntoAvisoPaula }}",
+        "emailType": "text",
+        "message": "={{ $('🧾 Normalizar solicitud').first().json.avisoPaula }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "gm-paula-revisar",
+      "name": "⚠️ Avisar a Paula (revisar)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        560
+      ],
+      "webhookId": "e0f4b7d5-6a8c-4d24-9f95-2c3a0b8d4e67",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6Y0ppgw5612jvIrR",
+          "name": "Gmail account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('⚙️ Configuración').first().json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 801934088,
+          "mode": "list",
+          "cachedResultName": "Untitled",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tlnz559jVxHivBunTFlOy7cBl-5oWBgPpUnHKpoGXf4/edit#gid=801934088"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "FECHA": "={{ $('🧾 Normalizar solicitud').first().json.fechaISO }}",
+            "EMPRESA": "={{ $('🧾 Normalizar solicitud').first().json.empresa }}",
+            "NIT": "",
+            "CONTACTO": "={{ $('🧾 Normalizar solicitud').first().json.nombre }}",
+            "CARGO": "",
+            "EMAIL": "={{ $('🧾 Normalizar solicitud').first().json.email }}",
+            "TELEFONO": "={{ $('🧾 Normalizar solicitud').first().json.telefono }}",
+            "CIUDAD": "={{ $('🧾 Normalizar solicitud').first().json.ciudad }}",
+            "DIRECCION": "",
+            "NECESIDAD": "={{ $('🧾 Normalizar solicitud').first().json.mensaje }}",
+            "ASUNTO": "={{ $('🧾 Normalizar solicitud').first().json.asuntoRegistro }}",
+            "MESSAGE_ID": "={{ $('🧾 Normalizar solicitud').first().json.id }}",
+            "THREAD_ID": "",
+            "ESTADO": "={{ $('🧾 Normalizar solicitud').first().json.estado }}",
+            "RESPONDIO": "No",
+            "FECHA_ULTIMO_CONTACTO": "={{ $('🧾 Normalizar solicitud').first().json.fechaISO }}",
+            "OBSERVACION": "={{ $('🧾 Normalizar solicitud').first().json.observacion }}",
+            "id": "={{ $('🧾 Normalizar solicitud').first().json.id }}",
+            "threadId": "",
+            "labelIds": "",
+            "AGENDO_REUNION": "No"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EMPRESA",
+              "displayName": "EMPRESA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NIT",
+              "displayName": "NIT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONTACTO",
+              "displayName": "CONTACTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CARGO",
+              "displayName": "CARGO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TELEFONO",
+              "displayName": "TELEFONO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CIUDAD",
+              "displayName": "CIUDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DIRECCION",
+              "displayName": "DIRECCION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NECESIDAD",
+              "displayName": "NECESIDAD",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ASUNTO",
+              "displayName": "ASUNTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MESSAGE_ID",
+              "displayName": "MESSAGE_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "THREAD_ID",
+              "displayName": "THREAD_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ESTADO",
+              "displayName": "ESTADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "RESPONDIO",
+              "displayName": "RESPONDIO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FECHA_ULTIMO_CONTACTO",
+              "displayName": "FECHA_ULTIMO_CONTACTO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OBSERVACION",
+              "displayName": "OBSERVACION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "threadId",
+              "displayName": "threadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "labelIds",
+              "displayName": "labelIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AGENDO_REUNION",
+              "displayName": "AGENDO_REUNION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "sheet-solicitud",
+      "name": "🧾 Registrar solicitud",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        420,
+        420
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 4000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OArKGhCcmGh9SsKF",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📥 Solicitud web (webhook)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Configuración": {
+      "main": [
+        [
+          {
+            "node": "🧾 Normalizar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Normalizar solicitud": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder al sitio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Responder al sitio": {
+      "main": [
+        [
+          {
+            "node": "❓ ¿Tiene correo válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ ¿Tiene correo válido?": {
+      "main": [
+        [
+          {
+            "node": "🔔 Avisar a Paula",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Avisar a Paula (revisar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Avisar a Paula": {
+      "main": [
+        [
+          {
+            "node": "📎 Descargar portafolio (PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📎 Descargar portafolio (PDF)": {
+      "main": [
+        [
+          {
+            "node": "📤 Enviar portafolio al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Enviar portafolio al cliente": {
+      "main": [
+        [
+          {
+            "node": "🧾 Registrar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ Avisar a Paula (revisar)": {
+      "main": [
+        [
+          {
+            "node": "🧾 Registrar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "ad5a031c205701175a59da2f498be47dbce917e2c5a2016625c5d8e831cdf1be"
+  },
+  "tags": []
+}
