@@ -46,7 +46,15 @@ En n8n: *Workflows → Import from File* → `postulaciones-web.n8n.json`.
 
 Los IDs de los dos documentos y de la carpeta ya vienen puestos en **⚙️ Configuración**. Solo queda:
 
-- Verificar que los tres nodos de Google tomaron las credenciales correctas (vienen apuntando a las mismas que usan los otros flujos).
+- **Verificar una por una las credenciales de los tres nodos de Google.** Es el paso que más se rompe: al importar, n8n no siempre respeta la credencial del archivo y engancha la primera del mismo tipo que encuentra, que puede ser la de otra persona. El flujo debe quedar así:
+
+  | Nodo | Credencial |
+  |---|---|
+  | 📋 Leer vacantes · 🧾 Registrar postulación | `Google Sheets account 2` |
+  | 📎 Subir hoja de vida a Drive | `Google Drive account 2` |
+  | ✉️ Notificar (las dos) | `Gmail account` |
+
+  Las tres deben estar conectadas a **marketingdigital@asignar.com.co**. Abriendo la credencial en n8n se ve a qué cuenta de Google pertenece. Si Drive queda con la cuenta equivocada, esa cuenta no ve la carpeta `Hojas de vida` —que está restringida a propósito— y **la subida falla en silencio**: el correo sale, la fila se registra, pero la hoja de vida no queda en Drive.
 - Activar el workflow y copiar la **Production URL** del nodo webhook.
 
 ### 2. Conectar el sitio
@@ -75,7 +83,7 @@ Las variables en Vercel solo entran a jugar en el **siguiente deploy**: después
 | 📋 Leer vacantes | Lee la primera pestaña del documento `Vacantes` |
 | 🧠 Resolver reclutador | Busca la fila con ese `id` y saca `correo_reclutador`; arma asunto y cuerpo |
 | ❓ ¿Adjuntó hoja de vida? | Bifurca según venga o no archivo |
-| 📎 Subir a Drive | Guarda la HV como `Ciudad - Cargo - Nombre` |
+| 📎 Subir a Drive | Guarda la HV como `Nombre_Cargo_Cédula.pdf` |
 | ✉️ Notificar (2 variantes) | Envía al reclutador, con copia a marketing, con la HV adjunta |
 | 🧾 Registrar postulación | Agrega la fila en `Postulaciones Web` |
 | ✅ Responder al sitio | Devuelve `{ok: true}` para que el formulario muestre el éxito |
@@ -86,6 +94,8 @@ Las variables en Vercel solo entran a jugar en el **siguiente deploy**: después
 - **Hay un respaldo por número de fila.** Si la columna `id` está vacía —o para enlaces viejos que sigan circulando—, se cae al comportamiento anterior. Deja de aplicar en cuanto la columna esté llena.
 - **`AUTORIZA_MARKETING`** viene del consentimiento **separado y opcional** del formulario. Solo las filas en `SI` pueden entrar a campañas de email marketing: el consentimiento obligatorio cubre el proceso de selección, no usos comerciales (Ley 1581 de 2012).
 - Los nodos de Drive y Sheets usan `continueRegularOutput`: si Drive o el registro fallan, **el correo al reclutador igual sale**. Es preferible perder la trazabilidad que perder la postulación.
+- **Un fallo de Drive se ve en la columna `HOJA_DE_VIDA`.** Ahí queda `NO SE SUBIO A DRIVE …` con el motivo, en vez del enlace. Antes decía `adjunta al correo`, que es también lo que dice una postulación sin archivo: las dos situaciones se veían igual y un fallo podía pasar meses sin que nadie lo notara.
+- **El nombre del archivo es `Nombre_Cargo_Cédula`** más la extensión original. La cédula va al final porque es lo único irrepetible: dos «Auxiliar de Cocina» que se llamen igual solo se distinguen por el documento.
 - **El registro escribe en modo `RAW`.** Google Sheets evalúa como fórmula toda celda que empiece por `+`, `=`, `-` o `@`: un teléfono escrito como `+57 300…` quedaría en `#ERROR!`. Y en modo normal un documento con ceros a la izquierda los perdería al convertirse en número.
 - **Drive y Gmail cuelgan en paralelo del IF**, no uno detrás del otro. El nodo de Google Drive no reenvía el archivo binario que recibe —su salida son los metadatos del archivo ya subido—, así que un Gmail encadenado después se queda sin nada que adjuntar. Colgando ambos del mismo punto, los dos reciben el ítem que todavía trae la hoja de vida.
 
