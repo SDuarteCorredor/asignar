@@ -86,6 +86,9 @@ Nuevos icon components en página Icons (`7:2`): **shield-check** `339:4`, **map
 ### ⛔ Gold eliminado del DS (2026-07-08)
 Decisión del cliente: fuera el gold de la marca web (nada de amarillo/dorado, y menos como texto sobre fondo oscuro). Eliminado en Figma: variante **Style=Gold** del Badge (`8:12`), variables **`brand/gold`** (`2:10`) y **`color/accent/gold`** (`2:32`), y sus **swatches** en Foundations (`6:10`, `6:92`). En código: quitado `--color-brand-gold` de `globals.css` y reemplazados los usos (`text-brand-gold` → `text-brand-light-blue` en eyebrows de soluciones/FAQ/nosotros/postulate). Acento sobre oscuro = `brand-light-blue`; acento general = `brand-blue`.
 
+### 🎠 Clientes: de grilla a carrusel (2026-09-08, solo código)
+La sección **04b Clientes por sector** de `/servicios` ya no es la grilla de 62 logos que está en Figma (`318:2`): ahora es el **mismo carrusel del Home** (`components/clientes/LogosCarrusel.tsx`) con flechas, y cada logo abre un **modal a pantalla completa** (`ClientesModal.tsx`, velo `bg-brand-navy/70` + blur, mismo patrón que el overlay de vacantes) con los 62 clientes agrupados por sector. El Home mantiene su marquee, ahora más rápido (330 px/s) y con las mismas flechas. Los datos por sector se movieron de la página a `src/lib/clientes.ts` (`SECTORES_CLIENTES`), única fuente para carrusel y modal. **Figma quedó desactualizado en esa sección** — pendiente reflejar el carrusel + modal cuando se retome el archivo.
+
 ## 3. Pendientes conocidos
 
 - [ ] Subir imágenes reales (`public/hero-asignar.jpg`, `foto-sst.jpg`, logos de clientes) con `upload_assets` y reemplazar placeholders.
@@ -94,6 +97,7 @@ Decisión del cliente: fuera el gold de la marca web (nada de amarillo/dorado, y
 - [ ] Íconos Material Symbols adicionales (hotel, handshake, payments…) al set de Icons si se necesitan.
 - [ ] Explorar librerías de comunidad: `get_libraries(fileKey)` lista UI kits añadibles (motion, hero patterns).
 - [x] Servicios v2 (`/soluciones`): implementado en código — 7 secciones, ServiciosExplorer interactivo con dark tilt card, deploy OK (PR #31).
+- [ ] Reflejar en Figma el carrusel de clientes con flechas y el modal "todos los clientes" (hoy `318:2` sigue siendo la grilla estática).
 - [ ] Páginas restantes (Vacantes, Nosotros, Contacto…) — construir DESPUÉS de validar la dirección v2 en el Home.
 - [ ] Code Connect al final (mapear Button/Badge/Card de Figma ↔ componentes React cuando existan como componentes reutilizables en código).
 

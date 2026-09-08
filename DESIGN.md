@@ -54,7 +54,8 @@ Rampa (= estilos de texto en Figma): Display/Hero 64/68 · Display/XL 56/60 · H
 
 - Easings: `--ease-soft` cubic-bezier(0.32,0.72,0,1) · `--ease-spring` (0.34,1.56,0.64,1) · `--ease-out` (0.16,1,0.3,1).
 - Duraciones: fast 180ms · base 240ms · slow 400ms.
-- Patrones existentes: scroll-reveal (fade+24px up), word-swap en hero, marquee logos.
+- Patrones existentes: scroll-reveal (fade+24px up), word-swap en hero, carrusel de logos.
+- **Carrusel de logos** (`components/clientes/LogosCarrusel.tsx`, Home y Servicios): avance automático de 330 px/s en un solo `requestAnimationFrame` sobre `translate3d`, con flechas que empujan ~0.8 de pantalla en 620ms con `--ease-out`. Pausa al hover/foco. Con `prefers-reduced-motion` no hay avance automático y la flecha salta sin recorrido.
 - Regla: micro-interacciones sobrias; `prefers-reduced-motion` siempre respetado. Revisar todo motion nuevo con el skill `review-animations`.
 
 ## Componentes canónicos (Figma + código)

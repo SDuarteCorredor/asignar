@@ -164,15 +164,6 @@ summary {
   }
 }
 
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @keyframes marquee-vertical {
   from {
     transform: translateY(0);
@@ -329,9 +320,6 @@ html {
   }
   .word-swap {
     animation: none !important;
-  }
-  .marquee-track {
-    animation-play-state: paused !important;
   }
   .rise {
     opacity: 1 !important;

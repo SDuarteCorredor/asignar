@@ -5,7 +5,7 @@ import { PropuestaProvider } from "@/components/servicios/PropuestaProvider";
 import PropuestaForm from "@/components/servicios/PropuestaForm";
 import CTAWithVerticalMarquee from "@/components/ui/cta-with-text-marquee";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { altDeLogo } from "@/lib/clientes";
+import ClientesShowcase from "@/components/clientes/ClientesShowcase";
 import ResumenClave from "@/components/servicios/ResumenClave";
 import ComparativaServicios from "@/components/servicios/ComparativaServicios";
 
@@ -73,78 +73,6 @@ const cumplimientoCards = [
   {
     titulo: "Póliza de cumplimiento",
     descripcion: "Vigente y verificable ante tu empresa",
-  },
-];
-
-const sectoresClientes = [
-  {
-    // 34 logos → en desktop (8/fila) la última fila queda con 2, sin huérfano
-    nombre: "Sector Hotelero",
-    logos: [
-      "/clientes-brand/nh-hotels-y-resorts.webp", "/clientes-brand/marriott.webp",
-      "/clientes-brand/estelar.webp", "/clientes-brand/grand-hyatt.webp",
-      "/clientes-brand/tequendama-hoteles.webp", "/clientes-brand/atton-hoteles.webp",
-      "/clientes-brand/hilton-bogota.webp", "/clientes-brand/dann-carlton-hotel-y-spa.webp",
-      "/clientes-brand/hoteles-dann.webp", "/clientes-brand/exe-hotels.webp",
-      "/clientes-brand/ibis-hotels.webp", "/clientes-brand/intercontinental-movich-medellin.webp",
-      "/clientes-brand/hoteles-spiwak.webp", "/clientes-brand/movich-hotels.webp",
-      "/clientes-brand/jw-marriott.webp", "/clientes-brand/habitel-hotels.webp",
-      "/clientes-brand/hotel-caribe-cartagena.webp", "/clientes-brand/w-hotels.webp",
-      "/clientes-brand/diez-hotel-categoria-colombia.webp", "/clientes-brand/hotel-spirito-by-spiwak.webp",
-      "/clientes-brand/lagoon-hotel-llanogrande.webp", "/clientes-brand/four-seasons-hotels-and-resorts.webp",
-      "/clientes-brand/hotel-capital-ghl.webp", "/clientes-brand/fairfield-by-marriott-medellin.webp",
-      "/clientes-brand/nh-collection.webp", "/clientes-brand/sonesta-hotels-and-resorts.webp",
-      "/clientes-brand/irotama-resort.webp", "/clientes-brand/accor.webp",
-      "/clientes-brand/hotel-nutibara-medellin.webp", "/clientes-brand/the-charlee-hotels.webp",
-      "/clientes-brand/the-brown-at-luxe.webp", "/clientes-brand/crowne-plaza-barranquilla.webp",
-      "/clientes-brand/tequendama-hotel-medellin.webp", "/clientes-brand/city-express-hoteles.webp",
-    ],
-  },
-  {
-    // 7 logos → una sola fila
-    nombre: "Centros de eventos",
-    logos: [
-      "/clientes-brand/colsubsidio.webp", "/clientes-brand/corferias.webp",
-      "/clientes-brand/agora-bogota-centro-de-convenciones.webp", "/clientes-brand/centro-de-eventos-valle-del-pacifico.webp",
-      "/clientes-brand/centro-de-convenciones-cartagena-de-indias.webp", "/clientes-brand/macarena-centro-de-negocios-y-eventos.webp",
-      "/clientes-brand/d-groupe.webp",
-    ],
-  },
-  {
-    // 5 logos → una sola fila
-    nombre: "Clubes",
-    logos: [
-      "/clientes-brand/club-el-rodeo.webp", "/clientes-brand/country-club-ejecutivos.webp",
-      "/clientes-brand/club-campestre-pereira.webp", "/clientes-brand/club-campestre-de-cali.webp",
-      "/clientes-brand/club-campestre-medellin-llanogrande.webp",
-    ],
-  },
-  {
-    // 7 logos → una sola fila
-    nombre: "Restaurantes",
-    logos: [
-      "/clientes-brand/casal-casa-alimenticia.webp", "/clientes-brand/la-kasta-grill-y-wine.webp",
-      "/clientes-brand/mangiare-pizzeria-enoteca.webp", "/clientes-brand/la-causa-marisqueria.webp",
-      "/clientes-brand/romero-cocina-artesanal.webp", "/clientes-brand/izumi-asian-fusion.webp",
-      "/clientes-brand/casa-soller-cocina-mediterranea.webp",
-    ],
-  },
-  {
-    // 3 logos → una sola fila
-    nombre: "Sector Inmobiliario",
-    logos: [
-      "/clientes-brand/jalo.webp", "/clientes-brand/hashtag-98-hotel.webp",
-      "/clientes-brand/go-living-y-suites.webp",
-    ],
-  },
-  {
-    // 6 logos → una sola fila
-    nombre: "Industria, Producción, Retail y Servicios",
-    logos: [
-      "/clientes-brand/medicox.webp", "/clientes-brand/superpack.webp",
-      "/clientes-brand/fruta-fresca-origin.webp", "/clientes-brand/gesproyect.webp",
-      "/clientes-brand/rcd-project.webp", "/clientes-brand/industrias-mecanicas-dayo.webp",
-    ],
   },
 ];
 
@@ -322,33 +250,7 @@ export default function SolucionesPage() {
             </h2>
           </div>
 
-          <div className="space-y-12">
-            {sectoresClientes.map((sector) => (
-              <div key={sector.nombre}>
-                <div className="bg-surface-gray rounded-lg px-5 py-3 mb-6 inline-block">
-                  <span className="font-[var(--font-ui)] text-sm font-semibold text-brand-navy">
-                    {sector.nombre}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {sector.logos.map((src, i) => (
-                    <div
-                      key={i}
-                      className="shrink-0 w-[100px] h-[100px] md:w-[120px] md:h-[120px]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={src}
-                        alt={altDeLogo(src)}
-                        loading="lazy"
-                        className="w-full h-full object-contain rounded-full"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <ClientesShowcase />
         </div>
       </section>
 
