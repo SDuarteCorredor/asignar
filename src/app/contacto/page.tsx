@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
+import { enviarSolicitud, type ViaEnvio } from "@/lib/solicitud";
 
 /* ---------- Datos ---------- */
 const maps = (q: string) =>
@@ -12,8 +13,6 @@ const maps = (q: string) =>
 /* Comercial (cotizaciones y empresas) y talento (hojas de vida) son buzones
    distintos: el de comercial lo consume la automatización n8n de Paula. */
 const COMERCIAL = "comercialbog@asignar.com.co";
-/* Copia a gerencia y coordinación, como hacía el formulario anterior. */
-const COMERCIAL_CC = ["gerenciaop@asignar.com.co", "coorantioquia@asignar.com.co"];
 const TALENTO = "marketingdigital@asignar.com.co";
 const SQR_EMAIL = "sqr@asignar.com.co";
 const TEL = "+576043220310";
@@ -86,38 +85,39 @@ function ArrowRight({ className = "" }: { className?: string }) {
 
 export default function ContactoPage() {
   const [audiencia, setAudiencia] = useState<"empresa" | "candidato">("empresa");
-  const [enviado, setEnviado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [via, setVia] = useState<ViaEnvio | null>(null);
 
-  // Interino front-end: compone el correo comercial con los datos del formulario.
-  // TODO(TI): reemplazar por POST a un endpoint que persista la solicitud (CRM/correo).
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  /* La solicitud va a `/api/solicitud` → flujo n8n "Comercial - Solicitudes
+     web": el cliente recibe el portafolio con el link para agendar y Paula el
+     aviso. Si el webhook no responde, `enviarSolicitud` cae al correo. */
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (enviando) return;
     const fd = new FormData(e.currentTarget);
-    // Etiquetas y asunto acoplados al flujo n8n "Cotizaciones - Solicitudes
-    // Comercial (Paula)": filtra por el asunto y parsea estas etiquetas.
-    // "Mensaje" va al final porque su regex captura hasta el fin del correo.
-    const cuerpo = [
-      `Empresa: ${fd.get("empresa")}`,
-      `Nombre del contacto: ${fd.get("nombre")}`,
-      `Email de contacto: ${fd.get("email")}`,
-      `Teléfono: ${fd.get("telefono")}`,
-      `Ciudad: ${fd.get("ciudad")}`,
-      `Servicio de interés: ${fd.get("sector")}`,
-      "",
-      `Mensaje: ${fd.get("mensaje") || "Solicito una propuesta comercial."}`,
-    ].join("\n");
-    trackEvent("solicitud_comercial", {
-      origen: "contacto_empresa",
-      sector: String(fd.get("sector") || ""),
-      ciudad: String(fd.get("ciudad") || ""),
+    const dato = (campo: string) => String(fd.get(campo) ?? "").trim();
+
+    setEnviando(true);
+    const resultado = await enviarSolicitud({
+      origen: "contacto",
+      empresa: dato("empresa"),
+      nombre: dato("nombre"),
+      email: dato("email"),
+      telefono: dato("telefono"),
+      ciudad: dato("ciudad"),
+      servicio: dato("sector"),
+      mensaje: dato("mensaje"),
     });
 
-    window.location.href =
-      `mailto:${COMERCIAL}` +
-      `?cc=${encodeURIComponent(COMERCIAL_CC.join(","))}` +
-      `&subject=${encodeURIComponent(`Nuevo Contacto empresarial — ${fd.get("empresa")}`)}` +
-      `&body=${encodeURIComponent(cuerpo)}`;
-    setEnviado(true);
+    trackEvent("solicitud_comercial", {
+      origen: "contacto_empresa",
+      sector: dato("sector"),
+      ciudad: dato("ciudad"),
+      via: resultado,
+    });
+
+    setEnviando(false);
+    setVia(resultado);
   }
 
   return (
@@ -208,7 +208,7 @@ export default function ContactoPage() {
 
           {/* --- EMPRESA: formulario dominante --- */}
           {audiencia === "empresa" &&
-            (enviado ? (
+            (via ? (
               <div className="bg-white border border-border rounded-3xl p-10 text-center shadow-[0_24px_56px_-20px_rgba(0,18,51,0.12)]">
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-blue/10">
                   <span className="material-symbols-outlined text-brand-blue text-3xl">
@@ -216,16 +216,16 @@ export default function ContactoPage() {
                   </span>
                 </div>
                 <h2 className="font-[var(--font-display)] text-2xl font-bold text-brand-navy mb-2">
-                  Tu solicitud está lista para enviar
+                  {via === "api" ? "Recibimos tu solicitud" : "Tu solicitud está lista para enviar"}
                 </h2>
                 <p className="font-[var(--font-body)] text-sm text-text-secondary max-w-md mx-auto mb-6">
-                  Abrimos tu correo con la solicitud diligenciada. Al enviarlo,
-                  un asesor comercial te contactará en las próximas 24 horas
-                  hábiles.
+                  {via === "api"
+                    ? "Te acabamos de enviar el portafolio a tu correo, con un enlace para agendar una llamada cuando te quede cómodo. Un asesor comercial te contacta en las próximas 24 horas hábiles."
+                    : "Abrimos tu correo con la solicitud diligenciada. Al enviarlo, un asesor comercial te contactará en las próximas 24 horas hábiles."}
                 </p>
                 <button
                   type="button"
-                  onClick={() => setEnviado(false)}
+                  onClick={() => setVia(null)}
                   className="inline-flex items-center justify-center gap-2 border-[1.5px] border-border font-[var(--font-ui)] text-sm font-semibold text-brand-navy px-6 py-3 rounded-full hover:bg-surface transition-colors"
                 >
                   Enviar otra solicitud
@@ -316,10 +316,11 @@ export default function ContactoPage() {
 
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-[var(--font-ui)] text-[15px] font-semibold py-[15px] rounded-full shadow-[0_8px_20px_-6px_rgba(0,122,254,0.35)] hover:-translate-y-0.5 transition-all duration-200"
+                    disabled={enviando}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-[var(--font-ui)] text-[15px] font-semibold py-[15px] rounded-full shadow-[0_8px_20px_-6px_rgba(0,122,254,0.35)] transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0"
                   >
-                    Enviar solicitud
-                    <ArrowRight className="w-4 h-4" />
+                    {enviando ? "Enviando…" : "Enviar solicitud"}
+                    {!enviando && <ArrowRight className="w-4 h-4" />}
                   </button>
                   <p className="font-[var(--font-body)] text-xs text-text-muted text-center">
                     Tus datos están protegidos (Ley 1581 de 2012).
