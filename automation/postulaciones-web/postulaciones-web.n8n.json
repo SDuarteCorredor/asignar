@@ -283,7 +283,7 @@
             "EDAD": "={{ $('🧠 Resolver reclutador').item.json.edad }}",
             "TELEFONO": "={{ $('🧠 Resolver reclutador').item.json.telefono }}",
             "WHATSAPP": "={{ $('🧠 Resolver reclutador').item.json.whatsapp }}",
-            "HOJA_DE_VIDA": "={{ $json.webViewLink || ($('🧠 Resolver reclutador').item.json.tieneHV ? ('NO SE SUBIO A DRIVE - va adjunta al correo - ' + (($json.error && $json.error.message) || 'revisar la ejecucion en n8n')) : 'no adjuntó') }}",
+            "HOJA_DE_VIDA": "={{ $json.webViewLink || ($('🧠 Resolver reclutador').item.json.tieneHV ? ('NO SE SUBIO A DRIVE - va adjunta al correo - ' + ($json.error ? ($json.error.message || $json.error) : 'revisar la ejecucion en n8n')) : 'no adjuntó') }}",
             "RECLUTADOR": "={{ $('🧠 Resolver reclutador').item.json.reclutador }}",
             "ENRUTADO_OK": "={{ $('🧠 Resolver reclutador').item.json.enrutadoOk ? 'SI' : 'NO' }}",
             "AUTORIZA_MARKETING": "={{ $('🧠 Resolver reclutador').item.json.autorizaMarketing ? 'SI' : 'NO' }}",
