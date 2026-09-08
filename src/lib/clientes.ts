@@ -1,11 +1,11 @@
 /**
  * Logos de clientes reales, con el nombre de la marca que muestra cada uno.
  *
- * Vive aquí y no dentro de un componente porque lo consumen dos vistas: el
- * marquee del home (`components/home/ClientLogos.tsx`) y la grilla por sector
- * de `/servicios`. Antes la grilla de servicios repetía `alt="Cliente Asignar"`
- * en los 63 logos —inútil para accesibilidad y para búsqueda de imágenes—
- * mientras el home ya tenía los nombres correctos.
+ * Vive aquí y no dentro de un componente porque lo consumen tres vistas: el
+ * carrusel del home (`components/home/ClientLogos.tsx`), el de `/servicios` y
+ * el modal con el directorio por sector. Antes la grilla de servicios repetía
+ * `alt="Cliente Asignar"` en los 63 logos —inútil para accesibilidad y para
+ * búsqueda de imágenes— mientras el home ya tenía los nombres correctos.
  *
  * El `alt` es el nombre de la marca a secas, que es justo lo que comunica un
  * logo. No se le agrega "cliente de Asignar" a cada uno: el encabezado de la
@@ -86,3 +86,68 @@ const ALT_POR_SRC = new Map(LOGOS_CLIENTES.map((l) => [l.src, l.alt]));
 export function altDeLogo(src: string): string {
   return ALT_POR_SRC.get(src) ?? "Cliente de Asignar SAS";
 }
+
+/** Un sector de clientes con sus logos ya resueltos a `{ src, alt }`. */
+export type SectorClientes = { nombre: string; logos: LogoCliente[] };
+
+const sector = (nombre: string, srcs: string[]): SectorClientes => ({
+  nombre,
+  logos: srcs.map((src) => ({ src, alt: altDeLogo(src) })),
+});
+
+/**
+ * Los mismos clientes del marquee, agrupados por el sector al que pertenecen.
+ *
+ * Vive aquí —y no en `/servicios`— porque ahora lo consumen la página y el
+ * modal "todos los clientes" que se abre desde el carrusel. Son 62 y no 63
+ * porque la variante alterna del logo de NH solo tiene sentido en el marquee,
+ * donde repetir una marca pasa desapercibido; en una grilla organizada por
+ * sector saldría dos veces la misma empresa.
+ */
+export const SECTORES_CLIENTES: SectorClientes[] = [
+  sector("Sector Hotelero", [
+    "/clientes-brand/nh-hotels-y-resorts.webp", "/clientes-brand/marriott.webp",
+    "/clientes-brand/estelar.webp", "/clientes-brand/grand-hyatt.webp",
+    "/clientes-brand/tequendama-hoteles.webp", "/clientes-brand/atton-hoteles.webp",
+    "/clientes-brand/hilton-bogota.webp", "/clientes-brand/dann-carlton-hotel-y-spa.webp",
+    "/clientes-brand/hoteles-dann.webp", "/clientes-brand/exe-hotels.webp",
+    "/clientes-brand/ibis-hotels.webp", "/clientes-brand/intercontinental-movich-medellin.webp",
+    "/clientes-brand/hoteles-spiwak.webp", "/clientes-brand/movich-hotels.webp",
+    "/clientes-brand/jw-marriott.webp", "/clientes-brand/habitel-hotels.webp",
+    "/clientes-brand/hotel-caribe-cartagena.webp", "/clientes-brand/w-hotels.webp",
+    "/clientes-brand/diez-hotel-categoria-colombia.webp", "/clientes-brand/hotel-spirito-by-spiwak.webp",
+    "/clientes-brand/lagoon-hotel-llanogrande.webp", "/clientes-brand/four-seasons-hotels-and-resorts.webp",
+    "/clientes-brand/hotel-capital-ghl.webp", "/clientes-brand/fairfield-by-marriott-medellin.webp",
+    "/clientes-brand/nh-collection.webp", "/clientes-brand/sonesta-hotels-and-resorts.webp",
+    "/clientes-brand/irotama-resort.webp", "/clientes-brand/accor.webp",
+    "/clientes-brand/hotel-nutibara-medellin.webp", "/clientes-brand/the-charlee-hotels.webp",
+    "/clientes-brand/the-brown-at-luxe.webp", "/clientes-brand/crowne-plaza-barranquilla.webp",
+    "/clientes-brand/tequendama-hotel-medellin.webp", "/clientes-brand/city-express-hoteles.webp",
+  ]),
+  sector("Centros de eventos", [
+    "/clientes-brand/colsubsidio.webp", "/clientes-brand/corferias.webp",
+    "/clientes-brand/agora-bogota-centro-de-convenciones.webp", "/clientes-brand/centro-de-eventos-valle-del-pacifico.webp",
+    "/clientes-brand/centro-de-convenciones-cartagena-de-indias.webp", "/clientes-brand/macarena-centro-de-negocios-y-eventos.webp",
+    "/clientes-brand/d-groupe.webp",
+  ]),
+  sector("Clubes", [
+    "/clientes-brand/club-el-rodeo.webp", "/clientes-brand/country-club-ejecutivos.webp",
+    "/clientes-brand/club-campestre-pereira.webp", "/clientes-brand/club-campestre-de-cali.webp",
+    "/clientes-brand/club-campestre-medellin-llanogrande.webp",
+  ]),
+  sector("Restaurantes", [
+    "/clientes-brand/casal-casa-alimenticia.webp", "/clientes-brand/la-kasta-grill-y-wine.webp",
+    "/clientes-brand/mangiare-pizzeria-enoteca.webp", "/clientes-brand/la-causa-marisqueria.webp",
+    "/clientes-brand/romero-cocina-artesanal.webp", "/clientes-brand/izumi-asian-fusion.webp",
+    "/clientes-brand/casa-soller-cocina-mediterranea.webp",
+  ]),
+  sector("Sector Inmobiliario", [
+    "/clientes-brand/jalo.webp", "/clientes-brand/hashtag-98-hotel.webp",
+    "/clientes-brand/go-living-y-suites.webp",
+  ]),
+  sector("Industria, Producción, Retail y Servicios", [
+    "/clientes-brand/medicox.webp", "/clientes-brand/superpack.webp",
+    "/clientes-brand/fruta-fresca-origin.webp", "/clientes-brand/gesproyect.webp",
+    "/clientes-brand/rcd-project.webp", "/clientes-brand/industrias-mecanicas-dayo.webp",
+  ]),
+];
