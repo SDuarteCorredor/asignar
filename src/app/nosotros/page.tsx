@@ -42,7 +42,7 @@ const resumen = [
   },
   {
     title: "Modelo DOCA",
-    desc: "Disposición, Oportunidad, Calidad y Acompañamiento: respuesta en menos de 48 horas, selección verificada y supervisión in situ después de la vinculación.",
+    desc: "Disposición, Oportunidad, Calidad y Acompañamiento: respuesta ágil, selección verificada y supervisión in situ después de la vinculación.",
   },
 ];
 
@@ -50,7 +50,7 @@ const doca = [
   {
     num: "01",
     title: "Disposición",
-    desc: "Respondemos en menos de 48 horas. Tu urgencia es nuestra prioridad — estamos listos cuando nos necesitas, sin burocracia.",
+    desc: "Respondemos con rapidez. Tu urgencia es nuestra prioridad — estamos listos cuando nos necesitas, sin burocracia.",
   },
   {
     num: "02",

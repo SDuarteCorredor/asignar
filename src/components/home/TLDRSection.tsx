@@ -19,7 +19,7 @@ const resumen = [
   },
   {
     title: "Para empresas",
-    desc: "Selección verificada, nómina y prestaciones incluidas, y reemplazo garantizado en menos de 48 horas.",
+    desc: "Selección verificada, nómina y prestaciones incluidas, y reemplazo ágil ante cualquier ausencia.",
   },
   {
     title: "Cobertura y respaldo",

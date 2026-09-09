@@ -17,7 +17,7 @@ const filas: FilaServicio[] = [
     cuandoConviene:
       "Eventos, temporadas y picos puntuales (personal eventual) u operaciones continuas que necesitan un equipo a tiempo completo (personal temporal fijo).",
     incluye: [
-      "Cobertura en menos de 48 horas",
+      "Cobertura ágil",
       "Gestión completa de nómina",
       "Prestaciones y seguridad social",
       "Póliza de cumplimiento vigente",
