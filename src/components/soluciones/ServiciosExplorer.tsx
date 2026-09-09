@@ -63,7 +63,7 @@ const servicios: Servicio[] = [
         descripcion:
           "Suministro ágil de personal para cubrir picos de demanda, eventos, temporadas y reemplazos puntuales con cumplimiento total de la Ley 50 de 1990.",
         checks: [
-          "Cobertura en menos de 48 horas",
+          "Cobertura ágil",
           "Eventos, temporadas y picos",
           "Gestión completa de nómina",
           "Sin compromisos a largo plazo",

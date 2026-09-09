@@ -12,7 +12,7 @@ const puntosClave: { titulo: string; detalle: ReactNode }[] = [
   {
     titulo: "Qué tan rápido",
     detalle:
-      "Cobertura de personal en menos de 48 horas y respuesta comercial en menos de 24 horas hábiles, con un proceso de 7 pasos del reclutamiento a la vinculación.",
+      "Cobertura de personal en tiempo récord y respuesta comercial en menos de 24 horas hábiles, con un proceso de 7 pasos del reclutamiento a la vinculación.",
   },
   {
     titulo: "Dónde operamos",

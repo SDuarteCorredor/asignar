@@ -11,7 +11,7 @@ Asignar SAS es una Empresa de Servicios Temporales (EST) colombiana con más de 
 ## Usuarios objetivo
 
 1. **Candidatos** (prioridad visual #1 en el hero): personas buscando empleo operativo (meseros, auxiliares de cocina, camareros, bodega, aseo). Móvil-primero, lenguaje cercano, cero fricción hacia "Postúlate" / portal `postulate.asignar.cloud`.
-2. **Empresas B2B** (prioridad de negocio): gerentes de operaciones y RRHH de hoteles 4-5★, cadenas de restaurantes, centros de eventos, industria. Buscan velocidad (personal en <48h), cumplimiento legal (Ley 50/1990, SG-SST, ARL SURA) y respaldo. Conversión: "Solicitar propuesta".
+2. **Empresas B2B** (prioridad de negocio): gerentes de operaciones y RRHH de hoteles 4-5★, cadenas de restaurantes, centros de eventos, industria. Buscan velocidad (personal listo en tiempo récord —sin comprometer una cifra de horas: los procesos administrativos de vinculación no lo permiten—), cumplimiento legal (Ley 50/1990, SG-SST, ARL SURA) y respaldo. Conversión: "Solicitar propuesta".
 
 ## Propósito del sitio
 

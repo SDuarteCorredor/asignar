@@ -29,7 +29,7 @@ const beneficios = [
   "Proceso de selección completo y verificado",
   "Vinculación directa con Asignar como empleador",
   "Nómina, prestaciones y seguridad social incluidas",
-  "Reemplazo garantizado en menos de 48 horas",
+  "Reemplazo ágil ante cualquier ausencia",
   "Especialistas en hotelería, restaurantes e industria",
   "Reporte mensual de gestión y rotación",
 ];

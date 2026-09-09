@@ -90,7 +90,7 @@ export default function SolucionesPage() {
             </span>
             <h1 className="font-[var(--font-display)] text-[32px] md:text-[40px] font-extrabold text-brand-navy leading-[1.06] tracking-[-0.8px] mb-5">
               El personal que tu operación necesita, listo en{" "}
-              <span className="text-brand-blue">menos de 48 horas</span>.
+              <span className="text-brand-blue">tiempo récord</span>.
             </h1>
             <p className="font-[var(--font-body)] text-lg text-text-secondary leading-relaxed mb-6">
               Servicios temporales, outsourcing y selección de personal con
